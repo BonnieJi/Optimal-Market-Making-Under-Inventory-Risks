@@ -7,7 +7,7 @@ Mark-to-market PnL over time: W_t - W_0 (wealth from MarketState).
 import numpy as np
 
 from simulator import MarketSimulator
-from strategy import FixedSpreadBaseline
+from strategy import FixedSpreadBaseline, InventoryAwareStrategy
 
 
 def mark_to_market_pnl_series(state) -> np.ndarray:
@@ -38,6 +38,32 @@ def run_fixed_spread_path(
         k=k,
         seed=seed,
         strategy=FixedSpreadBaseline(c=c),
+    )
+    return sim.run()
+
+
+def run_inventory_aware_path(
+    *,
+    c: float = 0.5,
+    alpha: float = 0.1,
+    seed: int = 42,
+    S0: float = 100.0,
+    sigma: float = 1.0,
+    A: float = 1.0,
+    dt: float = 0.01,
+    T: float = 1.0,
+    k: float = 1.0,
+):
+    """Single path with inventory-aware quotes via reservation price."""
+    sim = MarketSimulator(
+        S0=S0,
+        sigma=sigma,
+        A=A,
+        dt=dt,
+        T=T,
+        k=k,
+        seed=seed,
+        strategy=InventoryAwareStrategy(c=c, alpha=alpha),
     )
     return sim.run()
 
@@ -105,3 +131,6 @@ if __name__ == "__main__":
     wide = run_fixed_spread_path(c=1.25, seed=42, A=demo_A)
     print_path_summary("tight c=0.15 (same seed)", tight, c=0.15)
     print_path_summary("wide  c=1.25 (same seed)", wide, c=1.25)
+
+    inv = run_inventory_aware_path(c=0.5, alpha=0.2, seed=42, A=demo_A)
+    print_path_summary("inventory-aware c=0.5, alpha=0.2", inv, c=0.5)

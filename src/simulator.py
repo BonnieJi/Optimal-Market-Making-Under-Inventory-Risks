@@ -1,6 +1,6 @@
 import numpy as np
 from market import MarketState
-from strategy import FixedSpreadBaseline
+from strategy import FixedSpreadBaseline, InventoryAwareStrategy
 
 
 class MarketSimulator:
@@ -14,7 +14,7 @@ class MarketSimulator:
         T: float = 1.0,  # horizon trading session
         k: float = 1.0,  # order arrival elasticity
         seed: int | None = None,
-        strategy: FixedSpreadBaseline | None = None,
+        strategy: FixedSpreadBaseline | InventoryAwareStrategy | None = None,
     ):
         self.S0 = S0
         self.sigma = sigma

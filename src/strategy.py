@@ -5,11 +5,7 @@ from market import MarketState
 
 @dataclass
 class FixedSpreadBaseline:
-    """
-    fixed hald spread.
-        bid = S_t - c
-        ask = S_t + c.
-    """
+#fixed half spread c = constent delta
 
     c: float = 0.5
 
@@ -20,13 +16,6 @@ class FixedSpreadBaseline:
 
 @dataclass
 class InventoryAwareStrategy:
-    """
-    Inventory-aware quoting around reservation price.
-
-        r_t = S_t - alpha * q_t
-        bid = r_t - c
-        ask = r_t + c
-    """
 
     c: float = 0.5
     alpha: float = 0.1

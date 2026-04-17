@@ -1,6 +1,8 @@
+from __future__ import annotations
+
 import numpy as np
 from market import MarketState
-from strategy import FixedSpreadBaseline, InventoryAwareStrategy
+from strategy import FixedSpreadBaseline
 
 
 class MarketSimulator:
@@ -14,7 +16,7 @@ class MarketSimulator:
         T: float = 1.0,  # horizon trading session
         k: float = 1.0,  # order arrival elasticity
         seed: int | None = None,
-        strategy: FixedSpreadBaseline | InventoryAwareStrategy | None = None,
+        strategy: FixedSpreadBaseline | None = None,
     ):
         self.S0 = S0
         self.sigma = sigma
@@ -110,7 +112,7 @@ class MarketSimulator:
 
     def step(self) -> MarketState:
         st = self.state
-        assert st is not None, "Call reset() before step()."
+        assert st is not None
 
         # advance time
         st.t = round(st.t + self.dt, 10)

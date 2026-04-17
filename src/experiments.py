@@ -4,17 +4,22 @@
 Mark-to-market PnL over time: W_t - W_0 (wealth from MarketState).
 """
 
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
 import numpy as np
 
+from metrics import (
+    PathMetrics,
+    compute_path_metrics,
+    mark_to_market_pnl_series,
+    summarize_paths,
+)
+from plotting import plot_drawdown_histogram, plot_sample_path, plot_terminal_pnl_histogram
 from simulator import MarketSimulator
 from strategy import FixedSpreadBaseline, InventoryAwareStrategy
-
-
-def mark_to_market_pnl_series(state) -> np.ndarray:
-    w = np.asarray(state.hist_W, dtype=float)
-    if w.size == 0:
-        return w
-    return w - w[0]
 
 
 def run_fixed_spread_path(
@@ -119,18 +124,119 @@ def print_path_summary(label: str, state, c: float) -> None:
     print(f"fills (buy/sell/total): {state.fills_buy}/{state.fills_sell}/{state.cumulative_fills}")
 
 
+def _print_mc_summary(name: str, s) -> None:
+    print(f"\n=== {name} ===")
+    print(f"  mean terminal PnL     : {s.mean_terminal_pnl:.6f}")
+    print(f"  std terminal PnL      : {s.std_terminal_pnl:.6f}")
+    print(f"  Sharpe-like (mean/std): {s.sharpe_like:.6f}")
+    print(f"  mean max drawdown     : {s.mean_max_drawdown:.6f}")
+    print(f"  mean |q| (time avg)   : {s.mean_abs_inventory:.6f}")
+    print(f"  mean Var(q) along path: {s.mean_inventory_var:.6f}")
+    print(f"  mean fills (total)    : {s.mean_fills:.4f}")
+    print(f"  mean fills buy / sell : {s.mean_fills_buy:.4f} / {s.mean_fills_sell:.4f}")
+
+
+def compare_baseline_vs_heuristic(
+    *,
+    n_paths: int = 500,
+    base_seed: int = 0,
+    c: float = 0.5,
+    alpha: float = 0.2,
+    S0: float = 100.0,
+    sigma: float = 1.0,
+    A: float = 40.0,
+    dt: float = 0.01,
+    T: float = 1.0,
+    k: float = 1.0,
+    results_dir: Path | None = None,
+    sample_seed: int = 42,
+) -> tuple[list[PathMetrics], list[PathMetrics]]:
+    """
+    Paired Monte Carlo: same seed per path for baseline vs inventory-aware strategy.
+
+    Saves figures under results_dir when provided (default: ./results next to this file).
+    """
+    if results_dir is None:
+        results_dir = Path(__file__).resolve().parent.parent / "results"
+
+    baseline_paths: list[PathMetrics] = []
+    heuristic_paths: list[PathMetrics] = []
+    sample_baseline = None
+    sample_heuristic = None
+
+    for i in range(n_paths):
+        seed = base_seed + i
+        b_state = run_fixed_spread_path(
+            c=c, seed=seed, S0=S0, sigma=sigma, A=A, dt=dt, T=T, k=k
+        )
+        h_state = run_inventory_aware_path(
+            c=c, alpha=alpha, seed=seed, S0=S0, sigma=sigma, A=A, dt=dt, T=T, k=k
+        )
+        baseline_paths.append(compute_path_metrics(b_state))
+        heuristic_paths.append(compute_path_metrics(h_state))
+        if seed == sample_seed:
+            sample_baseline = b_state
+            sample_heuristic = h_state
+
+    if sample_baseline is None:
+        sample_baseline = run_fixed_spread_path(
+            c=c, seed=sample_seed, S0=S0, sigma=sigma, A=A, dt=dt, T=T, k=k
+        )
+        sample_heuristic = run_inventory_aware_path(
+            c=c, alpha=alpha, seed=sample_seed, S0=S0, sigma=sigma, A=A, dt=dt, T=T, k=k
+        )
+
+    sb = summarize_paths(baseline_paths)
+    sh = summarize_paths(heuristic_paths)
+    _print_mc_summary(f"fixed-spread baseline (n={n_paths})", sb)
+    _print_mc_summary(f"inventory-aware α={alpha} (n={n_paths})", sh)
+
+    term_b = np.array([p.terminal_pnl for p in baseline_paths], dtype=float)
+    term_h = np.array([p.terminal_pnl for p in heuristic_paths], dtype=float)
+    dd_b = np.array([p.max_drawdown for p in baseline_paths], dtype=float)
+    dd_h = np.array([p.max_drawdown for p in heuristic_paths], dtype=float)
+
+    plot_sample_path(
+        sample_baseline,
+        f"Sample path — baseline (seed={sample_seed})",
+        save_path=results_dir / "mc_sample_path_baseline.png",
+    )
+    plot_sample_path(
+        sample_heuristic,
+        f"Sample path — inventory-aware α={alpha} (seed={sample_seed})",
+        save_path=results_dir / "mc_sample_path_heuristic.png",
+    )
+    plot_terminal_pnl_histogram(
+        term_b,
+        term_h,
+        save_path=results_dir / "mc_terminal_pnl_hist.png",
+    )
+    plot_drawdown_histogram(
+        dd_b,
+        dd_h,
+        save_path=results_dir / "mc_max_drawdown_hist.png",
+    )
+
+    print(f"\nFigures written to: {results_dir.resolve()}")
+    return baseline_paths, heuristic_paths
+
+
 if __name__ == "__main__":
-    verify_fixed_spread_baseline()
-    print("verification passed.")
+    if len(sys.argv) > 1 and sys.argv[1] == "mc":
+        n = int(sys.argv[2]) if len(sys.argv) > 2 else 500
+        compare_baseline_vs_heuristic(n_paths=n)
+    else:
+        verify_fixed_spread_baseline()
+        print("verification passed.")
 
-    demo_A = 40.0
-    final = run_fixed_spread_path(c=0.5, seed=42, A=demo_A)
-    print_path_summary("one path, c=0.5, seed=42", final, c=0.5)
+        demo_A = 40.0
+        final = run_fixed_spread_path(c=0.5, seed=42, A=demo_A)
+        print_path_summary("one path, c=0.5, seed=42", final, c=0.5)
 
-    tight = run_fixed_spread_path(c=0.15, seed=42, A=demo_A)
-    wide = run_fixed_spread_path(c=1.25, seed=42, A=demo_A)
-    print_path_summary("tight c=0.15 (same seed)", tight, c=0.15)
-    print_path_summary("wide  c=1.25 (same seed)", wide, c=1.25)
+        tight = run_fixed_spread_path(c=0.15, seed=42, A=demo_A)
+        wide = run_fixed_spread_path(c=1.25, seed=42, A=demo_A)
+        print_path_summary("tight c=0.15 (same seed)", tight, c=0.15)
+        print_path_summary("wide  c=1.25 (same seed)", wide, c=1.25)
 
-    inv = run_inventory_aware_path(c=0.5, alpha=0.2, seed=42, A=demo_A)
-    print_path_summary("inventory-aware c=0.5, alpha=0.2", inv, c=0.5)
+        inv = run_inventory_aware_path(c=0.5, alpha=0.2, seed=42, A=demo_A)
+        print_path_summary("inventory-aware c=0.5, alpha=0.2", inv, c=0.5)

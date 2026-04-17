@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 from market import MarketState
-from strategy import FixedSpreadBaseline
+from strategy import AvellanedaStoikovStrategy, FixedSpreadBaseline, InventoryAwareStrategy
 
 
 class MarketSimulator:
@@ -16,13 +16,14 @@ class MarketSimulator:
         T: float = 1.0,  # horizon trading session
         k: float = 1.0,  # order arrival elasticity
         seed: int | None = None,
-        strategy: FixedSpreadBaseline | None = None,
+        strategy: FixedSpreadBaseline | InventoryAwareStrategy | AvellanedaStoikovStrategy | None = None,
     ):
         self.S0 = S0
         self.sigma = sigma
         self.A = A
         self.strategy = strategy if strategy is not None else FixedSpreadBaseline(c=delta)
-        self.delta = self.strategy.c
+        # reference half-spread for baselines that use fixed c; AS has no single c
+        self.delta = getattr(self.strategy, "c", delta)
         self.dt = dt
         self.T = T
         self.k = k
@@ -34,7 +35,7 @@ class MarketSimulator:
     def reset(self) -> MarketState:
         st = MarketState(S=self.S0)
 
-        # post initial bid/ask quotes (fixed-spread baseline)
+        # initial quotes from strategy (fixed spread, heuristic, or AS)
         self.strategy.apply(st)
 
         self.state = st
@@ -54,7 +55,7 @@ class MarketSimulator:
         st.S = max(1e-4, st.S)
 
     def _update_quotes(self) -> None:
-        # fix spread around current mid (baseline: bid = S - c, ask = S + c)
+        # strategy posts bid/ask (fixed spread, reservation price, or AS)
         st = self.state
         assert st is not None
 

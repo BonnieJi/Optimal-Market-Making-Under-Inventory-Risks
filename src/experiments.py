@@ -20,6 +20,7 @@ from metrics import (
 from plotting import plot_drawdown_histogram, plot_sample_path, plot_terminal_pnl_histogram
 from simulator import MarketSimulator
 from strategy import (
+    AvellanedaStoikovOFIStrategy,
     AvellanedaStoikovStrategy,
     FixedSpreadBaseline,
     InventoryAwareStrategy,
@@ -36,6 +37,7 @@ def run_fixed_spread_path(
     dt: float = 0.01,
     T: float = 1.0,
     k: float = 1.0,
+    **sim_kwargs,
 ):
     """Single simulation path using the control strategy with half-spread c."""
     sim = MarketSimulator(
@@ -47,6 +49,7 @@ def run_fixed_spread_path(
         k=k,
         seed=seed,
         strategy=FixedSpreadBaseline(c=c),
+        **sim_kwargs,
     )
     return sim.run()
 
@@ -62,6 +65,7 @@ def run_inventory_aware_path(
     dt: float = 0.01,
     T: float = 1.0,
     k: float = 1.0,
+    **sim_kwargs,
 ):
     """Single path with inventory-aware quotes via reservation price."""
     sim = MarketSimulator(
@@ -73,6 +77,7 @@ def run_inventory_aware_path(
         k=k,
         seed=seed,
         strategy=InventoryAwareStrategy(c=c, alpha=alpha),
+        **sim_kwargs,
     )
     return sim.run()
 
@@ -87,6 +92,7 @@ def run_avellaneda_stoikov_path(
     dt: float = 0.01,
     T: float = 1.0,
     k: float = 1.0,
+    **sim_kwargs,
 ):
     """Single path with Avellaneda–Stoikov reservation price and optimal half-spread."""
     sim = MarketSimulator(
@@ -98,6 +104,53 @@ def run_avellaneda_stoikov_path(
         k=k,
         seed=seed,
         strategy=AvellanedaStoikovStrategy(gamma=gamma, sigma=sigma, T=T, k=k),
+        **sim_kwargs,
+    )
+    return sim.run()
+
+
+def run_avellaneda_ofi_path(
+    *,
+    gamma: float = 0.1,
+    skew_scale: float = 0.12,
+    seed: int = 42,
+    S0: float = 100.0,
+    sigma: float = 1.0,
+    A: float = 1.0,
+    dt: float = 0.01,
+    T: float = 1.0,
+    k: float = 1.0,
+    lob_evolve_vol: float = 4.0,
+    fee_per_unit: float = 0.0,
+    slippage_per_unit: float = 0.0,
+    q_max: int | None = None,
+    q_min: int | None = None,
+    latency_steps: int = 0,
+    **sim_kwargs,
+):
+    """
+    AS + OFI/LOB alpha skew on reservation price, with optional frictions.
+
+    Set fee_per_unit, slippage_per_unit, q_max / q_min, latency_steps for realism.
+    """
+    sim = MarketSimulator(
+        S0=S0,
+        sigma=sigma,
+        A=A,
+        dt=dt,
+        T=T,
+        k=k,
+        seed=seed,
+        strategy=AvellanedaStoikovOFIStrategy(
+            gamma=gamma, sigma=sigma, T=T, k=k, skew_scale=skew_scale
+        ),
+        lob_evolve_vol=lob_evolve_vol,
+        fee_per_unit=fee_per_unit,
+        slippage_per_unit=slippage_per_unit,
+        q_max=q_max,
+        q_min=q_min,
+        latency_steps=latency_steps,
+        **sim_kwargs,
     )
     return sim.run()
 
@@ -181,6 +234,7 @@ def compare_baseline_vs_heuristic(
     k: float = 1.0,
     results_dir: Path | None = None,
     sample_seed: int = 42,
+    **sim_kwargs,
 ) -> tuple[list[PathMetrics], list[PathMetrics]]:
     """
     Paired Monte Carlo: same seed per path for baseline vs inventory-aware strategy.
@@ -198,10 +252,19 @@ def compare_baseline_vs_heuristic(
     for i in range(n_paths):
         seed = base_seed + i
         b_state = run_fixed_spread_path(
-            c=c, seed=seed, S0=S0, sigma=sigma, A=A, dt=dt, T=T, k=k
+            c=c, seed=seed, S0=S0, sigma=sigma, A=A, dt=dt, T=T, k=k, **sim_kwargs
         )
         h_state = run_inventory_aware_path(
-            c=c, alpha=alpha, seed=seed, S0=S0, sigma=sigma, A=A, dt=dt, T=T, k=k
+            c=c,
+            alpha=alpha,
+            seed=seed,
+            S0=S0,
+            sigma=sigma,
+            A=A,
+            dt=dt,
+            T=T,
+            k=k,
+            **sim_kwargs,
         )
         baseline_paths.append(compute_path_metrics(b_state))
         heuristic_paths.append(compute_path_metrics(h_state))
@@ -211,10 +274,19 @@ def compare_baseline_vs_heuristic(
 
     if sample_baseline is None:
         sample_baseline = run_fixed_spread_path(
-            c=c, seed=sample_seed, S0=S0, sigma=sigma, A=A, dt=dt, T=T, k=k
+            c=c, seed=sample_seed, S0=S0, sigma=sigma, A=A, dt=dt, T=T, k=k, **sim_kwargs
         )
         sample_heuristic = run_inventory_aware_path(
-            c=c, alpha=alpha, seed=sample_seed, S0=S0, sigma=sigma, A=A, dt=dt, T=T, k=k
+            c=c,
+            alpha=alpha,
+            seed=sample_seed,
+            S0=S0,
+            sigma=sigma,
+            A=A,
+            dt=dt,
+            T=T,
+            k=k,
+            **sim_kwargs,
         )
 
     sb = summarize_paths(baseline_paths)
@@ -341,6 +413,90 @@ def compare_baseline_vs_avellaneda_stoikov(
     return baseline_paths, as_paths
 
 
+def run_phase4_realism(
+    *,
+    n_paths: int = 500,
+    c: float = 0.5,
+    alpha: float = 0.2,
+    S0: float = 100.0,
+    A: float = 40.0,
+    dt: float = 0.01,
+    T: float = 1.0,
+    k: float = 1.0,
+) -> None:
+    """Phase 4 bonus runs: adverse selection, latency, regimes, and clustered arrivals."""
+    print("\n--- Step 11: adverse selection ---")
+    compare_baseline_vs_heuristic(
+        n_paths=n_paths,
+        c=c,
+        alpha=alpha,
+        S0=S0,
+        sigma=1.0,
+        A=A,
+        dt=dt,
+        T=T,
+        k=k,
+        adverse_selection_prob=0.6,
+        adverse_selection_impact=0.03,
+    )
+
+    print("\n--- Step 12: latency (1-step) ---")
+    compare_baseline_vs_heuristic(
+        n_paths=n_paths,
+        c=c,
+        alpha=alpha,
+        S0=S0,
+        sigma=1.0,
+        A=A,
+        dt=dt,
+        T=T,
+        k=k,
+        latency_steps=1,
+    )
+    print("\n--- Step 12: latency (2-step) ---")
+    compare_baseline_vs_heuristic(
+        n_paths=n_paths,
+        c=c,
+        alpha=alpha,
+        S0=S0,
+        sigma=1.0,
+        A=A,
+        dt=dt,
+        T=T,
+        k=k,
+        latency_steps=2,
+    )
+
+    print("\n--- Step 13: volatility regimes (Markov 3-state) ---")
+    compare_baseline_vs_heuristic(
+        n_paths=n_paths,
+        c=c,
+        alpha=alpha,
+        S0=S0,
+        sigma=1.0,
+        A=A,
+        dt=dt,
+        T=T,
+        k=k,
+        sigma_regimes=(0.6, 1.0, 1.8),
+    )
+
+    print("\n--- Step 14: clustered arrivals (Hawkes-lite) ---")
+    compare_baseline_vs_heuristic(
+        n_paths=n_paths,
+        c=c,
+        alpha=alpha,
+        S0=S0,
+        sigma=1.0,
+        A=A,
+        dt=dt,
+        T=T,
+        k=k,
+        hawkes_decay=4.0,
+        hawkes_jump=0.25,
+    )
+
+
 if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] == "mc":
         rest = sys.argv[2:]
@@ -361,6 +517,13 @@ if __name__ == "__main__":
             if t.isdigit():
                 n_paths = int(t)
         run_parameter_sweeps(n_paths=n_paths)
+    elif len(sys.argv) > 1 and sys.argv[1] == "phase4":
+        rest = sys.argv[2:]
+        n_paths = 500
+        for t in rest:
+            if t.isdigit():
+                n_paths = int(t)
+        run_phase4_realism(n_paths=n_paths)
     else:
         verify_fixed_spread_baseline()
         print("verification passed.")
@@ -386,4 +549,24 @@ if __name__ == "__main__":
         print(f"inventory range q    : [{q_as.min()}, {q_as.max()}]")
         print(
             f"fills (buy/sell/total): {aso.fills_buy}/{aso.fills_sell}/{aso.cumulative_fills}"
+        )
+
+        ofi = run_avellaneda_ofi_path(
+            gamma=0.1,
+            seed=42,
+            A=demo_A,
+            fee_per_unit=0.01,
+            slippage_per_unit=0.005,
+            q_max=12,
+            q_min=-12,
+            latency_steps=1,
+        )
+        pnl_ofi = mark_to_market_pnl_series(ofi)
+        a_hist = np.asarray(ofi.hist_alpha, dtype=float)
+        print(f"\n=== AS + OFI (fees, slip, |q|≤12, 1-step latency) ===")
+        print(f"final W              : {ofi.wealth:.4f}")
+        print(f"PnL W_T − W_0        : {float(pnl_ofi[-1]):.4f}")
+        print(f"mean |alpha| (path)  : {float(np.mean(np.abs(a_hist))):.4f}")
+        print(
+            f"fills (buy/sell/total): {ofi.fills_buy}/{ofi.fills_sell}/{ofi.cumulative_fills}"
         )

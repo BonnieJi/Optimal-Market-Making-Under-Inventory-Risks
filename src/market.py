@@ -13,8 +13,14 @@ class MarketState:
     X: float = 0.0
     bid: float = None
     ask: float = None
-    fills_buy: int = 0   # bid hit: uy
+    fills_buy: int = 0   # bid hit: buy
     fills_sell: int = 0  # ask hit: sell
+
+    # order-flow / LOB proxies for alpha signal
+    ofi_window: list = field(default_factory=list)  # recent signed aggressive flow
+    bid_depth: float = 80.0
+    ask_depth: float = 80.0
+    last_alpha: float = 0.0
 
     #history
     hist_t: list = field(default_factory=list)
@@ -24,6 +30,7 @@ class MarketState:
     hist_q: list = field(default_factory=list) # inventory
     hist_X: list = field(default_factory=list) # cash
     hist_W: list = field(default_factory=list) # market wealth
+    hist_alpha: list = field(default_factory=list)
 
     @property
     def wealth(self) -> float:

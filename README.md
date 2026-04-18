@@ -52,6 +52,33 @@ The first term rewards balancing **fill sensitivity k** against **γ**; the seco
 
 Implementation: `src/strategy.py` (`AvellanedaStoikovStrategy`), wired through `MarketSimulator`.
 
+## Alpha signal (order flow + LOB) and AS+OFI
+
+**Signal (`src/signals.py`):**
+
+- **Trade OFI:** each time your **ask** is lifted we treat it as an **aggressive buy** (+1); each time your **bid** is hit we treat it as an **aggressive sell** (−1). A rolling window stores recent signed flow; the sum is scaled and blended with LOB imbalance.
+- **LOB imbalance:** synthetic **bid_depth** / **ask_depth** evolve with small noise (`lob_evolve_vol` in the simulator) and are nudged when you print size at the touch.
+
+**Combined alpha** \(\alpha \in (-1,1)\) is `tanh(w_ofi * z_OFI + w_lob * imb)` and feeds the **Avellaneda–Stoikov OFI** strategy (`AvellanedaStoikovOFIStrategy` in `src/strategy.py`):
+
+\[
+r = r_{\text{AS}} + \texttt{skew\_scale} \cdot \alpha
+\]
+
+Bullish flow (\(\alpha>0\)) shifts **reservation and both quotes upward**; bearish shifts them **downward** (half-spread \(\delta\) stays the standard AS symmetric form around the shifted \(r\)).
+
+**Realism knobs on `MarketSimulator` (defaults = off / mild):**
+
+| Parameter | Effect |
+|-----------|--------|
+| `fee_per_unit` | Per-share fee on every fill (cash drag). |
+| `slippage_per_unit` | You buy at `bid + slip`, sell at `ask − slip`. |
+| `q_max`, `q_min` | Hard inventory caps: widen the forbidden side so it effectively stops filling. |
+| `latency_steps` | Quotes use **lagged** mid from history (already supported). |
+| `lob_evolve_vol` | Volatility of synthetic depth noise (0 = static depths; OFI-only signal). |
+
+Example driver: `run_avellaneda_ofi_path` in `src/experiments.py`.
+
 ## Parameter sensitivity (Step 10)
 
 `src/sensitivity.py` sweeps one input at a time (holding others at defaults), runs **Monte Carlo** (`n_paths` replications per point), and saves figures under `results/sensitivity/`:
@@ -91,7 +118,8 @@ Figures are written under `results/` (see `src/plotting.py` and `src/sensitivity
 
 - `src/market.py` — `MarketState` (cash **X**, inventory **q**, quotes, histories).
 - `src/simulator.py` — mid-price shocks, quote update, Bernoulli fills, metrics history.
-- `src/strategy.py` — quoting rules (baseline, heuristic, AS).
+- `src/strategy.py` — quoting rules (baseline, heuristic, AS, AS+OFI).
+- `src/signals.py` — OFI window, LOB imbalance, alpha blend for skew.
 - `src/metrics.py` — per-path and Monte Carlo summaries (terminal PnL, drawdown, inventory stats).
 - `src/experiments.py` — drivers and comparisons.
 - `src/sensitivity.py` — Step 10 parameter sweeps and sensitivity figures.

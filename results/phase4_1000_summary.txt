@@ -1,0 +1,140 @@
+
+--- Step 11: adverse selection ---
+
+=== fixed-spread baseline (n=1000) ===
+  mean terminal PnL      : 23.557323
+  std terminal PnL       : 5.311665
+  Sharpe-like (mean/std) : 4.435017
+  mean max drawdown      : -2.056249
+  mean |q| (time avg)    : 3.143515
+  mean |q_T| (terminal)  : 4.801000
+  mean half-spread (path): 0.500000
+  mean Var(q) along path : 6.196330
+  mean fills (total)     : 48.6390
+  mean fills buy / sell  : 24.2060 / 24.4330
+
+=== inventory-aware α=0.2 (n=1000) ===
+  mean terminal PnL      : 21.166624
+  std terminal PnL       : 3.118495
+  Sharpe-like (mean/std) : 6.787449
+  mean max drawdown      : -0.711819
+  mean |q| (time avg)    : 1.015861
+  mean |q_T| (terminal)  : 1.048000
+  mean half-spread (path): 0.500000
+  mean Var(q) along path : 1.530666
+  mean fills (total)     : 50.3800
+  mean fills buy / sell  : 25.1790 / 25.2010
+
+Figures written to: /Users/bonnieji/Library/Mobile Documents/com~apple~CloudDocs/Desktop/Optimal Market Making Under Inventory Risk/results
+
+--- Step 12: latency (1-step) ---
+
+=== fixed-spread baseline (n=1000) ===
+  mean terminal PnL      : 23.580517
+  std terminal PnL       : 5.125061
+  Sharpe-like (mean/std) : 4.601022
+  mean max drawdown      : -2.036518
+  mean |q| (time avg)    : 3.146960
+  mean |q_T| (terminal)  : 4.881000
+  mean half-spread (path): 0.500000
+  mean Var(q) along path : 6.178369
+  mean fills (total)     : 49.1170
+  mean fills buy / sell  : 24.6160 / 24.5010
+
+=== inventory-aware α=0.2 (n=1000) ===
+  mean terminal PnL      : 20.818179
+  std terminal PnL       : 3.054573
+  Sharpe-like (mean/std) : 6.815414
+  mean max drawdown      : -0.648251
+  mean |q| (time avg)    : 1.012822
+  mean |q_T| (terminal)  : 1.064000
+  mean half-spread (path): 0.500000
+  mean Var(q) along path : 1.537732
+  mean fills (total)     : 50.9120
+  mean fills buy / sell  : 25.4940 / 25.4180
+
+Figures written to: /Users/bonnieji/Library/Mobile Documents/com~apple~CloudDocs/Desktop/Optimal Market Making Under Inventory Risk/results
+
+--- Step 12: latency (2-step) ---
+
+=== fixed-spread baseline (n=1000) ===
+  mean terminal PnL      : 23.173439
+  std terminal PnL       : 5.306828
+  Sharpe-like (mean/std) : 4.366721
+  mean max drawdown      : -2.175512
+  mean |q| (time avg)    : 3.243990
+  mean |q_T| (terminal)  : 4.943000
+  mean half-spread (path): 0.500000
+  mean Var(q) along path : 6.357691
+  mean fills (total)     : 49.3270
+  mean fills buy / sell  : 24.7600 / 24.5670
+
+=== inventory-aware α=0.2 (n=1000) ===
+  mean terminal PnL      : 20.456118
+  std terminal PnL       : 3.074061
+  Sharpe-like (mean/std) : 6.654428
+  mean max drawdown      : -0.673177
+  mean |q| (time avg)    : 1.036792
+  mean |q_T| (terminal)  : 1.093000
+  mean half-spread (path): 0.500000
+  mean Var(q) along path : 1.590934
+  mean fills (total)     : 51.0550
+  mean fills buy / sell  : 25.5700 / 25.4850
+
+Figures written to: /Users/bonnieji/Library/Mobile Documents/com~apple~CloudDocs/Desktop/Optimal Market Making Under Inventory Risk/results
+
+--- Step 13: volatility regimes (Markov 3-state) ---
+
+=== fixed-spread baseline (n=1000) ===
+  mean terminal PnL      : 24.363542
+  std terminal PnL       : 5.889584
+  Sharpe-like (mean/std) : 4.136717
+  mean max drawdown      : -2.625615
+  mean |q| (time avg)    : 3.142644
+  mean |q_T| (terminal)  : 4.717000
+  mean half-spread (path): 0.500000
+  mean Var(q) along path : 5.974318
+  mean fills (total)     : 48.5450
+  mean fills buy / sell  : 24.2430 / 24.3020
+
+=== inventory-aware α=0.2 (n=1000) ===
+  mean terminal PnL      : 21.454197
+  std terminal PnL       : 3.319195
+  Sharpe-like (mean/std) : 6.463675
+  mean max drawdown      : -0.914627
+  mean |q| (time avg)    : 1.013020
+  mean |q_T| (terminal)  : 1.052000
+  mean half-spread (path): 0.500000
+  mean Var(q) along path : 1.521477
+  mean fills (total)     : 50.2800
+  mean fills buy / sell  : 25.1100 / 25.1700
+
+Figures written to: /Users/bonnieji/Library/Mobile Documents/com~apple~CloudDocs/Desktop/Optimal Market Making Under Inventory Risk/results
+
+--- Step 14: clustered arrivals (Hawkes-lite) ---
+
+=== fixed-spread baseline (n=1000) ===
+  mean terminal PnL      : 90.380367
+  std terminal PnL       : 4.473923
+  Sharpe-like (mean/std) : 20.201591
+  mean max drawdown      : -0.195428
+  mean |q| (time avg)    : 2.149277
+  mean |q_T| (terminal)  : 2.312000
+  mean half-spread (path): 0.500000
+  mean Var(q) along path : 0.759229
+  mean fills (total)     : 180.8100
+  mean fills buy / sell  : 90.3520 / 90.4580
+
+=== inventory-aware α=0.2 (n=1000) ===
+  mean terminal PnL      : 89.865393
+  std terminal PnL       : 3.300206
+  Sharpe-like (mean/std) : 27.230236
+  mean max drawdown      : -0.122652
+  mean |q| (time avg)    : 0.272802
+  mean |q_T| (terminal)  : 0.154000
+  mean half-spread (path): 0.500000
+  mean Var(q) along path : 0.210024
+  mean fills (total)     : 181.4820
+  mean fills buy / sell  : 90.7340 / 90.7480
+
+Figures written to: /Users/bonnieji/Library/Mobile Documents/com~apple~CloudDocs/Desktop/Optimal Market Making Under Inventory Risk/results

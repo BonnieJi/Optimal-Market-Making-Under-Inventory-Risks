@@ -3,6 +3,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from market import MarketState
+from signals import compute_alpha_signal
 
 
 @dataclass
@@ -54,6 +55,43 @@ class AvellanedaStoikovStrategy:
         sig2 = float(self.sigma**2)
         r_t = float(st.S) - float(st.q) * self.gamma * sig2 * tau
         # Symmetric optimal half-spread (standard reduced form)
+        delta_t = (1.0 / self.gamma) * np.log(1.0 + self.gamma / self.k)
+        delta_t += 0.5 * self.gamma * sig2 * tau
+        st.bid = r_t - delta_t
+        st.ask = r_t + delta_t
+
+
+@dataclass
+class AvellanedaStoikovOFIStrategy:
+    """
+    AS quotes with order-flow / LOB alpha skew on the reservation price.
+
+        r_base = S - q γ σ² τ
+        α = compute_alpha_signal(state) ∈ (−1, 1)  (bullish → positive)
+        r = r_base + skew_scale * α
+        bid = r − δ,  ask = r + δ   (symmetric half-spread δ as in AS)
+
+    Bullish flow shifts quotes up; bearish shifts them down.
+    """
+
+    gamma: float = 0.1
+    sigma: float = 1.0
+    T: float = 1.0
+    k: float = 1.0
+    skew_scale: float = 0.12  # price units per unit alpha (tune vs tick size)
+    w_ofi: float = 0.55
+    w_lob: float = 0.45
+    ofi_scale: float = 8.0
+
+    def apply(self, st: MarketState) -> None:
+        tau = max(0.0, float(self.T - st.t))
+        sig2 = float(self.sigma**2)
+        r_base = float(st.S) - float(st.q) * self.gamma * sig2 * tau
+        alpha = compute_alpha_signal(
+            st, w_ofi=self.w_ofi, w_lob=self.w_lob, ofi_scale=self.ofi_scale
+        )
+        st.last_alpha = float(alpha)
+        r_t = r_base + self.skew_scale * alpha
         delta_t = (1.0 / self.gamma) * np.log(1.0 + self.gamma / self.k)
         delta_t += 0.5 * self.gamma * sig2 * tau
         st.bid = r_t - delta_t

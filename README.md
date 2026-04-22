@@ -99,6 +99,28 @@ python experiments.py sweep       # default ~120 paths per sweep point
 python experiments.py sweep 200     # more paths → smoother curves (slower)
 ```
 
+## Results plots
+
+### Monte Carlo comparison (baseline vs inventory-aware)
+
+![Sample path baseline](results/mc_sample_path_baseline.png)
+![Sample path inventory-aware](results/mc_sample_path_heuristic.png)
+![Terminal PnL histogram](results/mc_terminal_pnl_hist.png)
+![Max drawdown histogram](results/mc_max_drawdown_hist.png)
+
+### Parameter sensitivity sweeps
+
+![Gamma sweep: PnL and spread](results/sensitivity/sweep_gamma_as_pnl_spread.png)
+![Gamma sweep: theoretical delta](results/sensitivity/sweep_gamma_as_theoretical_delta.png)
+![Gamma sweep: PnL and terminal inventory](results/sensitivity/sweep_gamma_as_pnl_terminal_q.png)
+![Sigma sweep](results/sensitivity/sweep_sigma_as.png)
+![Sigma sweep theoretical delta](results/sensitivity/sweep_sigma_as_theoretical.png)
+![k sweep](results/sensitivity/sweep_k_as.png)
+![Baseline c sweep](results/sensitivity/sweep_c_baseline.png)
+![Heuristic alpha sweep](results/sensitivity/sweep_alpha_heuristic.png)
+![Horizon T sweep](results/sensitivity/sweep_T_horizon_as.png)
+![Reservation tilt vs T](results/sensitivity/sweep_T_reservation_tilt.png)
+
 ## Running experiments
 
 From `src/` (so imports resolve):
